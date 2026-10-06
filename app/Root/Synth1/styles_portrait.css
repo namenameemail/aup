@@ -86,14 +86,19 @@
     }
 
     .freqInputContainer select {
-        width: 40vw;
-    }
-
-
-    .freqInputContainer.freqInputContainer_const select {
         display: block;
         position: relative;
         left: 0;
+        width: 40vw;
+        height: 7vh;
+    }
+
+    .freqInputContainer input[title="min"],
+    .freqInputContainer input[title="max"] {
+        width: 25%;
+    }
+
+    .freqInputContainer.freqInputContainer_const select {
         width: 50%;
     }
 

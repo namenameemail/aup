@@ -23,7 +23,7 @@ export class LFOModule extends SynthModule {
             frequency = 400,
             type = 'sine',
             min = 0,
-            max = 1000,
+            max = 1,
         } = options;
 
         this.min = min;

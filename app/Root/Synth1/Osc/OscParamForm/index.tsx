@@ -14,7 +14,7 @@ export interface OscParamFormProps {
     parentIndex: number
     index: number
     onApply: (paramName: string, value: any) => void
-    onApplyConnect: (paramName: string, connectedItemId: string, moduleType: ModuleType) => void
+    onApplyConnect: (paramName: string, connectedItemId: string, moduleType: ModuleType, min: number, max: number) => void
     onRemove: (id: string) => void
 }
 
@@ -41,6 +41,8 @@ export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
     const [param, setParam] = useState('frequency');
     const [frequencySignalType, setFrequencySignalType] = useState<string>('const');
     const [frequencyConstValue, setFrequencyConstValue] = useState<string>('');
+    const [modMin, setModMin] = useState('');
+    const [modMax, setModMax] = useState('');
 
     const {synthState} = useContext(SynthContext);
 
@@ -72,14 +74,14 @@ export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
 
                 const [connectedItemId, type] = frequencySignalType.split(' ')
 
-                onApplyConnect(name, connectedItemId, type as ModuleType);
+                onApplyConnect(name, connectedItemId, type as ModuleType, +modMin, +modMax);
             }
         } else {
             const name = paramNameInput.current?.value as string;
             const value = valueInput.current?.value;
             onApply(name, value)
         }
-    }, [paramNameInput, valueInput, onApply, param, key, frequencyConstValue, frequencySignalType]);
+    }, [paramNameInput, valueInput, onApply, onApplyConnect, param, key, frequencyConstValue, frequencySignalType, modMin, modMax]);
 
     const handleParamChange = useCallback((e) => {
         setParam(e.target.value);
@@ -144,6 +146,28 @@ export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
                             placeholder={'value'}
                         />
                     )}
+                    {frequencySignalType !== 'const' && (
+                        <>
+                            <input
+                                value={modMin}
+                                type={'number'}
+                                step={0.01}
+                                onKeyDown={handleValueKeyDown}
+                                title={'min'}
+                                onChange={(e) => setModMin(e.target.value)}
+                                placeholder={'min'}
+                            />
+                            <input
+                                value={modMax}
+                                type={'number'}
+                                step={0.01}
+                                onKeyDown={handleValueKeyDown}
+                                title={'max'}
+                                onChange={(e) => setModMax(e.target.value)}
+                                placeholder={'max'}
+                            />
+                        </>
+                    )}
                     <select
                         ref={typeInput}
                         value={frequencySignalType}
@@ -167,17 +191,6 @@ export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
                 'decay',
                 'sustain',
                 'release'
-            ].includes(param) && (
-                <input
-                    ref={valueInput} type={'number'} min={0} step={0.01} onKeyDown={handleValueKeyDown}
-                    title={'value'}
-                    placeholder={'value'}/>
-            )}
-            {[
-                'lfoMin',
-                'lfoMax',
-                'adsrMin',
-                'adsrMax',
             ].includes(param) && (
                 <input
                     ref={valueInput} type={'number'} min={0} step={0.01} onKeyDown={handleValueKeyDown}

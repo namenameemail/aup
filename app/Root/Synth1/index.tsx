@@ -32,6 +32,7 @@ export const Synth1: React.FC<Synth1Props> = (props) => {
             <KeyTrigger keyValue={'ArrowLeft'} onPress={decXOffset}/>
             <KeyTrigger keyValue={'ArrowUp'} onPress={decYOffset}/>
             <KeyTrigger keyValue={'ArrowDown'} onPress={incYOffset}/>
+            <KeyTrigger codeValue={'='} onPress={handleAddOsc}/>
             <div className={'oscillators'}>
                 {Object.values(synthState).map((item, index) => {
                     return <Osc

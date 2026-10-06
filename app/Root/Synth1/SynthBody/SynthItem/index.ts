@@ -6,6 +6,7 @@ import {LFOModule} from "../modules/LFOModule";
 import {ParameterConnections} from "./ParameterConnections";
 import {v4 as uuid} from "uuid";
 import {ConstModule} from "../modules/ConstModule";
+import {RangeScale} from "../modules/RangeScale";
 import {SynthBody} from "../index";
 import {ModuleType} from "../modules/types";
 
@@ -26,17 +27,13 @@ export interface SynthItemState {
     decay: number
     sustain: number
     release: number
-    lfoMin: number
-    lfoMax: number
-    adsrMin: number
-    adsrMax: number
     appliers: AppliersState
 }
 
 export interface ParamsHandlers {
     [key: string]: {
         set: (value: any, _name: string) => any
-        connect?: (sourceItemId: string, moduleType: string, paramName: string) => any
+        connect?: (sourceItemId: string, moduleType: string, paramName: string, min: number, max: number) => any
         disconnect?: (paramName: Parameter) => void
     }
 }
@@ -49,10 +46,6 @@ export interface SynthItemOptions {
     decay?: number
     sustain?: number
     release?: number
-    lfoMin?: number
-    lfoMax?: number
-    adsrMin?: number
-    adsrMax?: number
     onStateChange?: (state: SynthItemState, id: string) => any
 }
 
@@ -64,10 +57,6 @@ export enum Parameter {
     release = 'release',
     sustain = 'sustain',
     decay = 'decay',
-    lfoMin = 'lfoMin',
-    lfoMax = 'lfoMax',
-    adsrMin = 'adsrMin',
-    adsrMax = 'adsrMax',
 }
 
 
@@ -118,10 +107,6 @@ export class SynthItem {
         decay: 0.2,
         sustain: 1,
         release: 0.4,
-        adsrMin: 0,
-        adsrMax: 1,
-        lfoMin: 0,
-        lfoMax: 1,
         onStateChange: undefined
     };
 
@@ -135,10 +120,6 @@ export class SynthItem {
             decay,
             sustain,
             release,
-            adsrMin,
-            adsrMax,
-            lfoMin,
-            lfoMax,
             onStateChange,
         } = (options ? {...SynthItem.defaultOptions, ...options} : SynthItem.defaultOptions);
 
@@ -164,8 +145,8 @@ export class SynthItem {
             decay,
             sustain,
             release,
-            min: adsrMin,
-            max: adsrMax,
+            min: 0,
+            max: 1,
         });
 
         this.parameterConnections.save(
@@ -177,8 +158,8 @@ export class SynthItem {
         this.m_LFO = new LFOModule({
             frequency,
             type,
-            min: lfoMin,
-            max: lfoMax,
+            min: 0,
+            max: 1,
         })
 
         this._osc = new Tone.Oscillator(
@@ -206,10 +187,6 @@ export class SynthItem {
             decay,
             sustain,
             release,
-            lfoMin,
-            lfoMax,
-            adsrMin,
-            adsrMax,
         }))
     }
 
@@ -248,49 +225,17 @@ export class SynthItem {
             set: (_value: any) => {
                 this.setConst(Parameter.frequency, +_value)
             },
-            connect: (sourceItemId: string, moduleType: ModuleType, paramName: Parameter) => {
-
-                this.disconnectParameterFromSource(Parameter.frequency)
-
-                console.log(moduleType, sourceItemId)
-
-                this.parameterConnections.save(
-                    Parameter.frequency,
-                    this.body.items[sourceItemId].getModule(moduleType)
-                        .connect([this._osc.frequency, this.m_LFO._lfo.frequency])
-                );
+            connect: (sourceItemId: string, moduleType: ModuleType, _paramName: Parameter, min: number, max: number) => {
+                this.connectModulator(Parameter.frequency, sourceItemId, moduleType, min, max)
             },
-            disconnect: () => {
-                if (this.parameterConnections.list[Parameter.frequency]) {
-
-                    this.parameterConnections.list[Parameter.frequency]?.module.disconnect([this._osc.frequency, this.m_LFO._lfo.frequency]);
-                    this.parameterConnections.list[Parameter.frequency] = undefined;
-                }
-            }
         },
         [Parameter.amplitude]: {
             set: (_value: any) => {
                 this.setConst(Parameter.amplitude, +_value)
             },
-            connect: (sourceItemId: string, moduleType: ModuleType, paramName: Parameter) => {
-
-                this.disconnectParameterFromSource(Parameter.amplitude)
-
-                this.parameterConnections.save(
-                    Parameter.amplitude,
-                    this.body.items[sourceItemId].getModule(moduleType)
-                        .connect(
-                            [this._amp.gain]
-                        )
-                );
+            connect: (sourceItemId: string, moduleType: ModuleType, _paramName: Parameter, min: number, max: number) => {
+                this.connectModulator(Parameter.amplitude, sourceItemId, moduleType, min, max)
             },
-            disconnect: () => {
-                if (this.parameterConnections.list[Parameter.amplitude]) {
-
-                    this.parameterConnections.list[Parameter.amplitude]?.module.disconnect([this._amp.gain]);
-                    this.parameterConnections.list[Parameter.amplitude] = undefined;
-                }
-            }
         },
         [Parameter.attack]: {
             set: (_value: any, _name: string) => {
@@ -312,26 +257,6 @@ export class SynthItem {
                 this.m_ADSR.setDecay(+_value)
             }
         },
-        [Parameter.adsrMin]: {
-            set: (_value: any, _name: string) => {
-                this.m_ADSR.setMin(+_value);
-            }
-        },
-        [Parameter.adsrMax]: {
-            set: (_value: any, _name: string) => {
-                this.m_ADSR.setMax(+_value);
-            }
-        },
-        [Parameter.lfoMin]: {
-            set: (_value: any, _name: string) => {
-                this.m_LFO.setMin(+_value)
-            }
-        },
-        [Parameter.lfoMax]: {
-            set: (_value: any, _name: string) => {
-                this.m_LFO.setMax(+_value)
-            }
-        },
     }
 
 
@@ -344,23 +269,55 @@ export class SynthItem {
         this.pushChange(paramName, value);
     }
 
-    connectParam(paramName: string, sourceItemId: string, moduleType: string) {
+    connectParam(paramName: string, sourceItemId: string, moduleType: string, min: number, max: number) {
         const connector = this.paramsHandlers[paramName]?.connect;
-        connector?.(sourceItemId, moduleType, paramName);
+        connector?.(sourceItemId, moduleType, paramName, min, max);
 
         this.setStateByName(paramName, [sourceItemId, moduleType]);
 
         this.pushChange(paramName, [sourceItemId, moduleType]);
     }
 
-    disconnectParameterFromSource = (paramName: Parameter) => {
-        this.paramsHandlers[paramName]?.disconnect?.(paramName);
-    };
-
-    setConst(paramName: Parameter.frequency | Parameter.amplitude, value: number) {
-        const destinations = paramName === Parameter.frequency
+    paramDestinations(paramName: Parameter.frequency | Parameter.amplitude) {
+        return paramName === Parameter.frequency
             ? [this._osc.frequency, this.m_LFO._lfo.frequency]
             : [this._amp.gain]
+    }
+
+    disconnectParameterFromSource = (paramName: Parameter.frequency | Parameter.amplitude) => {
+        const current = this.parameterConnections.list[paramName]
+        if (!current) {
+            return
+        }
+
+        const destinations = this.paramDestinations(paramName)
+        if (current.scale) {
+            current.module.disconnect([current.scale.input])
+            current.scale.disconnect(destinations)
+            current.scale.dispose()
+        } else {
+            current.module.disconnect(destinations)
+        }
+        this.parameterConnections.list[paramName] = undefined
+    };
+
+    connectModulator(paramName: Parameter.frequency | Parameter.amplitude, sourceItemId: string, moduleType: ModuleType, min: number, max: number) {
+        const source = this.body.items[sourceItemId].getModule(moduleType)
+        const current = this.parameterConnections.list[paramName]
+        if (current?.module === source && current.scale) {
+            current.scale.setRange(min, max)
+            return
+        }
+
+        this.disconnectParameterFromSource(paramName)
+        const scale = new RangeScale(min, max)
+        source.connect([scale.input])
+        scale.connect(this.paramDestinations(paramName))
+        this.parameterConnections.save(paramName, source, scale)
+    }
+
+    setConst(paramName: Parameter.frequency | Parameter.amplitude, value: number) {
+        const destinations = this.paramDestinations(paramName)
 
         let signal = paramName === Parameter.frequency ? this.frequencyConst : this.amplitudeConst
         if (!signal) {

@@ -55,8 +55,8 @@ export const Osc = forwardRef<OscImperativeHandlers, OscProps>(({id, index, xOff
         applyParamValue(id, _name, _value)
     }, [applyParamValue, id]);
 
-    const handleApplyConnect = React.useCallback(async (paramName: string, connectedItemId: string, moduleType: ModuleType) => {
-        applyParamConnect?.(id, paramName, connectedItemId, moduleType)
+    const handleApplyConnect = React.useCallback(async (paramName: string, connectedItemId: string, moduleType: ModuleType, min: number, max: number) => {
+        applyParamConnect?.(id, paramName, connectedItemId, moduleType, min, max)
     }, [applyParamConnect, id]);
 
 

@@ -1,7 +1,9 @@
 import {SynthModule} from "../modules/SynthModule";
+import {RangeScale} from "../modules/RangeScale";
 
 export interface ConnectionOptions {
     module: SynthModule
+    scale?: RangeScale
 }
 
 export class ParameterConnections {
@@ -12,9 +14,10 @@ export class ParameterConnections {
     constructor() {
     }
 
-    save = (paramName: string, connectedItemModule: SynthModule) => {
+    save = (paramName: string, connectedItemModule: SynthModule, scale?: RangeScale) => {
         this.list[paramName] = {
-            module: connectedItemModule
+            module: connectedItemModule,
+            scale,
         };
     };
 }

@@ -1,24 +1,23 @@
 .freqInputContainer {
     position: relative;
-
+    display: flex;
+    align-items: center;
 }
 
-
-.freqInputContainer select  {
-    height: 100%;
-}
-
-.freqInputContainer.freqInputContainer_const select  {
+.freqInputContainer select {
     display: none;
     position: absolute;
     left: 100%;
-    top: 0
-}
-.freqInputContainer.freqInputContainer_const:hover select  {
-    display: flex;
+    top: 0;
+    height: 100%;
 }
 
-.freqInputContainer:not(.freqInputContainer_const) select  {
-    display: flex;
+.freqInputContainer:hover select,
+.freqInputContainer:focus-within select {
+    display: block;
+}
 
+.freqInputContainer input[title="min"],
+.freqInputContainer input[title="max"] {
+    width: 45px;
 }

@@ -11,7 +11,7 @@ export interface SynthContextValue {
     removeItemApplier?: any,
     setItemApplierState?: (itemId: string, applierId: string, paramName: string, value: any) => any
     applyParamValue?: any
-    applyParamConnect?: (itemId: string, paramName: string, connectedItemId: string, moduleType: ModuleType) => void
+    applyParamConnect?: (itemId: string, paramName: string, connectedItemId: string, moduleType: ModuleType, min: number, max: number) => void
     setItemPlay?: any
     setItemStop?: any
     setItemIndex?: (itemId: string, index: number) => any
@@ -60,8 +60,8 @@ export function SynthContextProvider(props: any) {
         body.current?.items[itemIndex]?.setParam(paramName, value);
     }, [body]);
 
-    const applyParamConnect = React.useCallback((itemId: string, paramName: string, connectedItemId: string, moduleType: ModuleType) => {
-        body.current?.items[itemId]?.connectParam(paramName, connectedItemId, moduleType);
+    const applyParamConnect = React.useCallback((itemId: string, paramName: string, connectedItemId: string, moduleType: ModuleType, min: number, max: number) => {
+        body.current?.items[itemId]?.connectParam(paramName, connectedItemId, moduleType, min, max);
     }, [body]);
 
     const setItemPlay = React.useCallback((itemId: string) => {
