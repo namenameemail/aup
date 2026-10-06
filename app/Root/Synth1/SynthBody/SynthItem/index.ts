@@ -339,6 +339,57 @@ export class SynthItem {
         this.parameterConnections.save(paramName, signal.connect(destinations))
     }
 
+    releaseIfFrom(source: SynthItem) {
+        ([Parameter.frequency, Parameter.amplitude] as const).forEach(param => {
+            const current = this.parameterConnections.list[param]
+            if (current?.module !== source.m_LFO && current?.module !== source.m_ADSR) {
+                return
+            }
+            this.restoreOwn(param)
+        })
+        this.changes = this.changes.filter(change => !(Array.isArray(change.value) && change.value[0] === source.id))
+        this.setStateByName('changes', this.changes)
+        ;([Parameter.frequency, Parameter.amplitude] as const).forEach(param => {
+            const value = this.state[param]
+            if (Array.isArray(value) && value[0] === source.id) {
+                this.setStateByName(param, param === Parameter.frequency
+                    ? (this.frequencyConst?.value ?? SynthItem.defaultOptions.frequency)
+                    : (this.amplitudeConst?.value))
+            }
+        })
+    }
+
+    restoreOwn(paramName: Parameter.frequency | Parameter.amplitude) {
+        if (paramName === Parameter.frequency) {
+            const value = this.frequencyConst?.value
+                ?? (typeof this.state.frequency === 'number' ? this.state.frequency : SynthItem.defaultOptions.frequency)
+            this.setParam(Parameter.frequency, value)
+            return
+        }
+        if (this.amplitudeConst) {
+            this.setParam(Parameter.amplitude, this.amplitudeConst.value)
+            return
+        }
+        this.disconnectParameterFromSource(Parameter.amplitude)
+        this.parameterConnections.save(
+            Parameter.amplitude,
+            this.m_ADSR.connect([this._amp.gain]),
+        )
+        this.changes = this.changes.filter(change => change.paramName !== Parameter.amplitude)
+        this.setStateByName('changes', this.changes)
+    }
+
+    dispose() {
+        this.disconnectParameterFromSource(Parameter.frequency)
+        this.disconnectParameterFromSource(Parameter.amplitude)
+        this._osc.dispose()
+        this._amp.dispose()
+        this.m_LFO.dispose()
+        this.m_ADSR.dispose()
+        this.frequencyConst?.dispose()
+        this.amplitudeConst?.dispose()
+    }
+
 
     // TRIGGERS TRIGGERS TRIGGERS TRIGGERS TRIGGERS TRIGGERS TRIGGERS TRIGGERS TRIGGERS
 

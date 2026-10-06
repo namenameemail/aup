@@ -78,4 +78,10 @@ export class ADSRModule extends SynthModule {
     triggerRelease = () => {
         this._ADSR.triggerRelease();
     };
+
+    dispose() {
+        this._ADSR.dispose();
+        this._ADSR_mul.dispose();
+        this._ADSR_add.dispose();
+    }
 }

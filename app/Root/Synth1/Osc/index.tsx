@@ -1,7 +1,7 @@
 import * as React from "react";
 import {forwardRef, useContext, useEffect, useMemo} from "react";
 import * as Tone from "tone";
-import {OscParamForm} from "./OscParamForm";
+import {OscParamForm, isQuoteHeld, isBackslashHeld, bindLayerKeys} from "./OscParamForm";
 import {KeyTrigger} from "../../../components/KeyboardJS/KeyboardJSTrigger";
 import {SynthContext, SynthContextValue} from "../context";
 import './styles.css';
@@ -24,6 +24,7 @@ export const Osc = forwardRef<OscImperativeHandlers, OscProps>(({id, index, xOff
         synthState,
         removeItemApplier,
         addItemApplier,
+        removeItem,
         applyParamValue,
         applyParamConnect,
         setItemPlay,
@@ -36,6 +37,8 @@ export const Osc = forwardRef<OscImperativeHandlers, OscProps>(({id, index, xOff
     useEffect(() => {
         setItemIndex?.(id, index);
     }, [id, index]);
+
+    useEffect(() => bindLayerKeys(), []);
 
     const handleStart = React.useCallback(async () => {
         setItemPlay(id)
@@ -51,6 +54,27 @@ export const Osc = forwardRef<OscImperativeHandlers, OscProps>(({id, index, xOff
             setItemPlay(id)
         }
     }, [setItemPlay, setItemStop, id, item.started]);
+
+    const handleDigitPress = React.useCallback((e) => {
+        if (isQuoteHeld()) {
+            e.preventDefault();
+            removeItem(id);
+            return;
+        }
+        if (isBackslashHeld()) {
+            e.preventDefault();
+            addItemApplier(id);
+            return;
+        }
+        handleToggle();
+    }, [handleToggle, removeItem, addItemApplier, id]);
+
+    const handleDigitRelease = React.useCallback(() => {
+        if (isQuoteHeld() || isBackslashHeld()) {
+            return;
+        }
+        handleToggle();
+    }, [handleToggle]);
     const handleApply = React.useCallback(async (_name, _value) => {
         applyParamValue(id, _name, _value)
     }, [applyParamValue, id]);
@@ -113,7 +137,7 @@ export const Osc = forwardRef<OscImperativeHandlers, OscProps>(({id, index, xOff
                         {item.changes.map(change => {
                             return change.paramName + ' ' + (
                                 Array.isArray(change.value)
-                                    ? ((synthState[change.value[0]].index + 1) + ' ' + change.value[1])
+                                    ? ((synthState[change.value[0]]?.index + 1) + ' ' + change.value[1])
                                     : (change.value)
                             )
                         }).join(', ')}
@@ -126,11 +150,11 @@ export const Osc = forwardRef<OscImperativeHandlers, OscProps>(({id, index, xOff
                     <KeyTrigger
                         codeValue={key}
                         withShift
-                        onPress={handleToggle}/>
+                        onPress={handleDigitPress}/>
                     <KeyTrigger
                         codeValue={key}
-                        onPress={handleToggle}
-                        onRelease={handleToggle}/>
+                        onPress={handleDigitPress}
+                        onRelease={handleDigitRelease}/>
                 </>
             )}
             {Object.values(item.appliers || {}).map((applier, applierIndex) => (

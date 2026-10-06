@@ -41,6 +41,10 @@ export class LFOModule extends SynthModule {
         this._lfo.start(time);
     }
 
+    dispose() {
+        this._lfo.dispose();
+    }
+
     setType(type: string) {
         this.type = type;
         this._lfo.type = type as Tone.ToneOscillatorType;

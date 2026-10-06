@@ -20,6 +20,10 @@ export class ConstModule extends SynthModule {
         this.value = value
         this._const.value = value
     }
+
+    dispose() {
+        this._const.dispose()
+    }
 }
 
 

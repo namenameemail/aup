@@ -42,13 +42,25 @@ export class SynthBody {
     }
 
     deleteItem(id: string) {
-        const {[id]: deleted, ...newItems} = this.items;
+        const deleted = this.items[id]
+        if (!deleted) {
+            return
+        }
 
-        this.items = newItems;
+        Object.values(this.items).forEach(item => {
+            if (item.id !== id) {
+                item.releaseIfFrom(deleted)
+            }
+        })
 
-        this.setState(({[id]: deleted, ...newItems}) => newItems)
+        deleted.dispose()
 
-        this.updateIndexes();
+        const {[id]: _removed, ...newItems} = this.items
+        this.items = newItems
+
+        this.setState(({[id]: _state, ...rest}) => rest)
+
+        this.updateIndexes()
     }
 }
 
