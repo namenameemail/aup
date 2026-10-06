@@ -1,6 +1,7 @@
 import React, {createContext, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {SynthBody, SynthState} from "./SynthBody";
 import {ModuleType} from "./SynthBody/modules/types";
+import {readSynth, writeSynth} from "./persist";
 
 export interface SynthContextValue {
     body?: SynthBody
@@ -29,7 +30,14 @@ export function SynthContextProvider(props: any) {
     const [synthState, setSynthState] = useState<SynthState>({});
 
     useEffect(() => {
-        body.current = new SynthBody((state: SynthState) => setSynthState(state));
+        const persist = readSynth();
+        body.current = new SynthBody((state: SynthState) => {
+            setSynthState(state);
+            if (body.current && !body.current.loading) {
+                writeSynth({voices: body.current.serialize()});
+            }
+        });
+        body.current.load(persist?.voices);
     }, []);
 
     const addItem = useCallback(() => {

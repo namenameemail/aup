@@ -7,8 +7,10 @@ import {ParameterConnections} from "./ParameterConnections";
 import {v4 as uuid} from "uuid";
 import {ConstModule} from "../modules/ConstModule";
 import {RangeScale} from "../modules/RangeScale";
+import {LfoRangeScale} from "../modules/LfoRangeScale";
 import {SynthBody} from "../index";
 import {ModuleType} from "../modules/types";
+import {isSavedMod, SavedParam, SavedVoice} from "../../persist";
 
 export interface SynthItemChange {
     paramName: string,
@@ -39,6 +41,7 @@ export interface ParamsHandlers {
 }
 
 export interface SynthItemOptions {
+    id?: string
     frequency?: number
     v?: number
     type?: string
@@ -105,13 +108,13 @@ export class SynthItem {
         type: 'sine',
         attack: 0.1,
         decay: 0.2,
-        sustain: 1,
+        sustain: 0.5,
         release: 0.4,
         onStateChange: undefined
     };
 
     constructor(body: SynthBody, options?: SynthItemOptions) {
-        this.id = uuid();
+        this.id = options?.id || uuid();
         this.body = body;
         const {
             frequency,
@@ -302,7 +305,8 @@ export class SynthItem {
     };
 
     connectModulator(paramName: Parameter.frequency | Parameter.amplitude, sourceItemId: string, moduleType: ModuleType, min: number, max: number) {
-        const source = this.body.items[sourceItemId].getModule(moduleType)
+        const sourceItem = this.body.items[sourceItemId]
+        const source = sourceItem.getModule(moduleType)
         const current = this.parameterConnections.list[paramName]
         if (current?.module === source && current.scale) {
             current.scale.setRange(min, max)
@@ -310,9 +314,18 @@ export class SynthItem {
         }
 
         this.disconnectParameterFromSource(paramName)
+        const destinations = this.paramDestinations(paramName)
+        if (moduleType === ModuleType.lfo) {
+            const scale = new LfoRangeScale(min, max)
+            source.connect([scale.input])
+            scale.attachAdsr(sourceItem.m_ADSR)
+            scale.connect(destinations)
+            this.parameterConnections.save(paramName, source, scale)
+            return
+        }
         const scale = new RangeScale(min, max)
         source.connect([scale.input])
-        scale.connect(this.paramDestinations(paramName))
+        scale.connect(destinations)
         this.parameterConnections.save(paramName, source, scale)
     }
 
@@ -413,5 +426,77 @@ export class SynthItem {
                 return this.m_LFO;
         }
     };
+
+    serializeParam(paramName: Parameter.frequency | Parameter.amplitude): SavedParam | undefined {
+        const current = this.parameterConnections.list[paramName];
+        if (!current) {
+            return;
+        }
+        if (current.module === this.frequencyConst || current.module === this.amplitudeConst) {
+            return {const: (current.module as ConstModule).value};
+        }
+        if (!current.scale) {
+            return;
+        }
+        for (const item of Object.values(this.body.items)) {
+            const moduleType = item.m_LFO === current.module
+                ? ModuleType.lfo
+                : item.m_ADSR === current.module
+                    ? ModuleType.adsr
+                    : null;
+            if (moduleType) {
+                return {sourceId: item.id, moduleType, ...current.scale.getRange()};
+            }
+        }
+    }
+
+    serialize(): SavedVoice {
+        return {
+            id: this.id,
+            type: this.state.type,
+            attack: +this.state.attack,
+            decay: +this.state.decay,
+            sustain: +this.state.sustain,
+            release: +this.state.release,
+            frequency: this.serializeParam(Parameter.frequency),
+            amplitude: this.serializeParam(Parameter.amplitude),
+            changes: this.changes,
+            appliers: Object.values(this.appliers.appliers || {}).map(applier => applier.state),
+        };
+    }
+
+    restore(data: SavedVoice) {
+        this.setParam(Parameter.type, data.type);
+        this.setParam(Parameter.attack, data.attack);
+        this.setParam(Parameter.decay, data.decay);
+        this.setParam(Parameter.sustain, data.sustain);
+        this.setParam(Parameter.release, data.release);
+        this.applySavedParam(Parameter.frequency, data.frequency);
+        this.applySavedParam(Parameter.amplitude, data.amplitude);
+        this.changes = data.changes || [];
+        this.setStateByName('changes', this.changes);
+        if (data.appliers?.length) {
+            data.appliers.forEach(applier => this.appliers.add(applier));
+        } else {
+            const n = data.applierCount || 0;
+            for (let i = 0; i < n; i++) {
+                this.appliers.add();
+            }
+        }
+    }
+
+    applySavedParam(paramName: Parameter.frequency | Parameter.amplitude, data?: SavedParam) {
+        if (!data) {
+            return;
+        }
+        if (isSavedMod(data)) {
+            if (!this.body.items[data.sourceId]) {
+                return;
+            }
+            this.connectParam(paramName, data.sourceId, data.moduleType, data.min, data.max);
+            return;
+        }
+        this.setParam(paramName, data.const);
+    }
 
 }

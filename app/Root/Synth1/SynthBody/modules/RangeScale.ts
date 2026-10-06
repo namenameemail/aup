@@ -18,6 +18,11 @@ export class RangeScale extends SynthModule {
         this.input.factor.value = max - min;
     }
 
+    getRange() {
+        const min = this._add.addend.value;
+        return {min, max: min + this.input.factor.value};
+    }
+
     dispose() {
         this.input.dispose();
         this._add.dispose();

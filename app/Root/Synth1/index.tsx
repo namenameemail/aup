@@ -1,10 +1,11 @@
 import * as React from "react";
-import {useCallback, useContext, useState} from "react";
+import {useCallback, useContext, useEffect, useState} from "react";
 import {Osc} from "./Osc";
 import './styles.css';
 import './styles_portrait.css';
 import {SynthContext} from "./context";
 import {KeyTrigger} from "../../components/KeyboardJS/KeyboardJSTrigger";
+import {readSynth, writeSynth} from "./persist";
 
 export interface Synth1Props {
 
@@ -18,8 +19,13 @@ export const Synth1: React.FC<Synth1Props> = (props) => {
         addItem();
     }, [addItem]);
 
-    const [xOffset, setXOffset] = useState(0);
-    const [yOffset, setYOffset] = useState(0);
+    const saved = readSynth();
+    const [xOffset, setXOffset] = useState(saved?.xOffset ?? 0);
+    const [yOffset, setYOffset] = useState(saved?.yOffset ?? 0);
+
+    useEffect(() => {
+        writeSynth({xOffset, yOffset});
+    }, [xOffset, yOffset]);
 
     const incXOffset = useCallback(() => setXOffset(xOffset + 1), [xOffset]);
     const decXOffset = useCallback(() => setXOffset(xOffset - 1), [xOffset]);

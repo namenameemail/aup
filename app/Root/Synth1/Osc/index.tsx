@@ -165,6 +165,7 @@ export const Osc = forwardRef<OscImperativeHandlers, OscProps>(({id, index, xOff
                     parentIndex={index}
                     index={applierIndex}
                     id={applier.id}
+                    itemId={id}
 
                     onApply={handleApply}
                     onApplyConnect={handleApplyConnect}

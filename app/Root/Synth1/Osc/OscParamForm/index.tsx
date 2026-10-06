@@ -11,6 +11,7 @@ export interface OscParamFormProps {
     xOffset: number
     yOffset: number
     id: string
+    itemId: string
     parentIndex: number
     index: number
     onApply: (paramName: string, value: any) => void
@@ -172,18 +173,24 @@ export function bindLayerKeys() {
 
 export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
 
-    const {onApply, onApplyConnect, xOffset, yOffset, index, id, parentIndex, onRemove} = props;
+    const {onApply, onApplyConnect, xOffset, yOffset, index, id, itemId, parentIndex, onRemove} = props;
     const typeInput = useRef<HTMLSelectElement>(null);
     const valueInput = useRef<HTMLInputElement>(null);
     const paramNameInput = useRef<HTMLSelectElement>(null);
 
-    const [param, setParam] = useState('frequency');
-    const [frequencySignalType, setFrequencySignalType] = useState<string>('const');
-    const [frequencyConstValue, setFrequencyConstValue] = useState<string>('');
-    const [modMin, setModMin] = useState('');
-    const [modMax, setModMax] = useState('');
+    const {synthState, setItemApplierState} = useContext(SynthContext);
+    const saved = synthState[itemId]?.appliers?.[id];
 
-    const {synthState} = useContext(SynthContext);
+    const [param, setParam] = useState(saved?.paramName || 'frequency');
+    const [frequencySignalType, setFrequencySignalType] = useState<string>(saved?.signalType || 'const');
+    const [frequencyConstValue, setFrequencyConstValue] = useState<string>(saved?.value || '');
+    const [modMin, setModMin] = useState(saved?.modMin || '');
+    const [modMax, setModMax] = useState(saved?.modMax || '');
+    const [waveType, setWaveType] = useState(saved?.waveType || 'square');
+
+    const patch = useCallback((field: string, value: string) => {
+        setItemApplierState?.(itemId, id, field, value);
+    }, [setItemApplierState, itemId, id]);
 
     const offsetParentIndex = parentIndex - xOffset;
     const offsetIndex = index - yOffset;
@@ -204,7 +211,7 @@ export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
         }
         if (param === 'type') {
             const name = paramNameInput.current?.value as string;
-            const value = typeInput.current?.value;
+            const value = typeInput.current?.value || waveType;
             onApply(name, value)
         } else if ([Parameter.frequency, Parameter.amplitude].includes(param as Parameter)) {
 
@@ -220,14 +227,15 @@ export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
             }
         } else {
             const name = paramNameInput.current?.value as string;
-            const value = valueInput.current?.value;
+            const value = valueInput.current?.value || frequencyConstValue;
             onApply(name, value)
         }
     }, [paramNameInput, valueInput, onApply, onApplyConnect, param, key, frequencyConstValue, frequencySignalType, modMin, modMax]);
 
     const handleParamChange = useCallback((e) => {
         setParam(e.target.value);
-    }, []);
+        patch('paramName', e.target.value);
+    }, [patch]);
 
     const handleValueKeyDown = useCallback((e) => {
 
@@ -240,13 +248,14 @@ export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
     }, [onRemove, id]);
 
     const handleFrequencyConstValueChange = useCallback((e) => {
-        setFrequencyConstValue(e.target.value)
-    }, []);
+        setFrequencyConstValue(e.target.value);
+        patch('value', e.target.value);
+    }, [patch]);
 
     const handleFrequencySignalTypeChange = useCallback((e) => {
-        setFrequencySignalType(e.target.value)
-
-    }, []);
+        setFrequencySignalType(e.target.value);
+        patch('signalType', e.target.value);
+    }, [patch]);
 
     useEffect(() => bindLayerKeys(), []);
 
@@ -309,7 +318,10 @@ export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
                 })}
             </select>
             {param === 'type' && (
-                <select ref={typeInput} title={'wave type'} onKeyDown={handleValueKeyDown}>
+                <select ref={typeInput} title={'wave type'} value={waveType} onKeyDown={handleValueKeyDown} onChange={(e) => {
+                    setWaveType(e.target.value);
+                    patch('waveType', e.target.value);
+                }}>
                     <option value={'square'}>square</option>
                     <option value={'sine'}>sine</option>
                     <option value={'triangle'}>triangle</option>
@@ -341,7 +353,10 @@ export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
                                 step={0.01}
                                 onKeyDown={handleValueKeyDown}
                                 title={'min'}
-                                onChange={(e) => setModMin(e.target.value)}
+                                onChange={(e) => {
+                                    setModMin(e.target.value);
+                                    patch('modMin', e.target.value);
+                                }}
                                 placeholder={'min'}
                             />
                             <input
@@ -350,7 +365,10 @@ export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
                                 step={0.01}
                                 onKeyDown={handleValueKeyDown}
                                 title={'max'}
-                                onChange={(e) => setModMax(e.target.value)}
+                                onChange={(e) => {
+                                    setModMax(e.target.value);
+                                    patch('modMax', e.target.value);
+                                }}
                                 placeholder={'max'}
                             />
                         </>
@@ -382,6 +400,8 @@ export const OscParamForm: React.FC<OscParamFormProps> = (props) => {
                 <input
                     ref={valueInput} type={'number'} min={0} step={0.01} onKeyDown={handleValueKeyDown}
                     title={'value'}
+                    value={frequencyConstValue}
+                    onChange={handleFrequencyConstValueChange}
                     placeholder={'value'}/>
             )}
         </form>

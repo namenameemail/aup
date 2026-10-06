@@ -1,5 +1,4 @@
 import {v4 as uuid} from "uuid";
-import {ModuleType} from "../modules/types";
 
 export interface AppliersState {
     [id: string]: ApplierState
@@ -7,9 +6,11 @@ export interface AppliersState {
 export interface ApplierState {
     id: string
     paramName: string
-    value?: any
-    connectItemId?: string
-    connectItemModuleType?: ModuleType
+    value?: string
+    signalType?: string
+    modMin?: string
+    modMax?: string
+    waveType?: string
 }
 
 export class Applier {
@@ -17,15 +18,18 @@ export class Applier {
     state: ApplierState
 
     onStateChange: (state: ApplierState, id: string) => any
-    constructor(onStateChange: (state: ApplierState, id: string) => any) {
-        this.id = uuid()
+    constructor(onStateChange: (state: ApplierState, id: string) => any, saved?: Partial<ApplierState>) {
+        this.id = saved?.id || uuid()
         this.onStateChange = onStateChange
-
 
         this.setState(() => ({
             id: this.id,
-            paramName: 'frequency',
-            value: ''
+            paramName: saved?.paramName || 'frequency',
+            value: saved?.value || '',
+            signalType: saved?.signalType || 'const',
+            modMin: saved?.modMin || '',
+            modMax: saved?.modMax || '',
+            waveType: saved?.waveType || 'square',
         }))
     }
 
@@ -52,8 +56,8 @@ export class Appliers {
         this.onStateChange = onStateChange;
     }
 
-    add() {
-        const applier = new Applier(this.setItemState);
+    add(saved?: Partial<ApplierState>) {
+        const applier = new Applier(this.setItemState, saved);
 
         this.appliers[applier.id] = applier;
 

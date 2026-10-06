@@ -1,9 +1,12 @@
 import {SynthModule} from "../modules/SynthModule";
 import {RangeScale} from "../modules/RangeScale";
+import {LfoRangeScale} from "../modules/LfoRangeScale";
+
+export type ModScale = RangeScale | LfoRangeScale
 
 export interface ConnectionOptions {
     module: SynthModule
-    scale?: RangeScale
+    scale?: ModScale
 }
 
 export class ParameterConnections {
@@ -14,7 +17,7 @@ export class ParameterConnections {
     constructor() {
     }
 
-    save = (paramName: string, connectedItemModule: SynthModule, scale?: RangeScale) => {
+    save = (paramName: string, connectedItemModule: SynthModule, scale?: ModScale) => {
         this.list[paramName] = {
             module: connectedItemModule,
             scale,
