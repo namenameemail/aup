@@ -84,7 +84,7 @@ export const Osc = forwardRef<OscImperativeHandlers, OscProps>(({id, index, xOff
                     className={'oscStartButton'}
                     onClick={item.started ? handleStop : handleStart}
                 >
-                    {item.started ? '▮' : '▯'}
+                    <span className={'oscStartGlyph'}>{item.started ? '▮' : '▯'}</span>
                     {
                         key ? (
                                 (xOffset !== 0)

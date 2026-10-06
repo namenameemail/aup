@@ -93,6 +93,8 @@ export class SynthItem {
 
     m_ADSR: ADSRModule
     m_LFO: LFOModule
+    frequencyConst?: ConstModule
+    amplitudeConst?: ConstModule
 
 
     parameterConnections: ParameterConnections
@@ -243,17 +245,8 @@ export class SynthItem {
             },
         },
         [Parameter.frequency]: {
-            set: (_value: any, paramName: string) => {
-                const value = +_value;
-
-                this.disconnectParameterFromSource(Parameter.frequency)
-
-                this.parameterConnections.save(
-                    Parameter.frequency,
-                    (new ConstModule(value))
-                        .connect([this._osc.frequency, this.m_LFO._lfo.frequency])
-                )
-
+            set: (_value: any) => {
+                this.setConst(Parameter.frequency, +_value)
             },
             connect: (sourceItemId: string, moduleType: ModuleType, paramName: Parameter) => {
 
@@ -276,16 +269,8 @@ export class SynthItem {
             }
         },
         [Parameter.amplitude]: {
-            set: (_value: any, paramName: string) => {
-                const value = +_value;
-
-                this.disconnectParameterFromSource(Parameter.amplitude)
-
-                this.parameterConnections.save(
-                    Parameter.amplitude,
-                    (new ConstModule(value))
-                        .connect([this._amp.gain])
-                )
+            set: (_value: any) => {
+                this.setConst(Parameter.amplitude, +_value)
             },
             connect: (sourceItemId: string, moduleType: ModuleType, paramName: Parameter) => {
 
@@ -372,15 +357,42 @@ export class SynthItem {
         this.paramsHandlers[paramName]?.disconnect?.(paramName);
     };
 
+    setConst(paramName: Parameter.frequency | Parameter.amplitude, value: number) {
+        const destinations = paramName === Parameter.frequency
+            ? [this._osc.frequency, this.m_LFO._lfo.frequency]
+            : [this._amp.gain]
+
+        let signal = paramName === Parameter.frequency ? this.frequencyConst : this.amplitudeConst
+        if (!signal) {
+            signal = new ConstModule(value)
+            if (paramName === Parameter.frequency) {
+                this.frequencyConst = signal
+            } else {
+                this.amplitudeConst = signal
+            }
+        } else {
+            signal.setValue(value)
+        }
+
+        if (this.parameterConnections.list[paramName]?.module === signal) {
+            return
+        }
+
+        this.disconnectParameterFromSource(paramName)
+        this.parameterConnections.save(paramName, signal.connect(destinations))
+    }
+
 
     // TRIGGERS TRIGGERS TRIGGERS TRIGGERS TRIGGERS TRIGGERS TRIGGERS TRIGGERS TRIGGERS
 
     triggerAttack() {
+        Tone.start();
         this.m_ADSR.triggerAttack();
         this.setStateByName('started', true);
     }
 
     triggerRelease() {
+        Tone.start();
         this.m_ADSR.triggerRelease();
         this.setStateByName('started', false);
     }

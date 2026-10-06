@@ -4,14 +4,21 @@
     "noImplicitAny": true,
     "module": "es6",
     "target": "es5",
+    "lib": ["DOM", "ES2017"],
     "jsx": "react",
+    "skipLibCheck": true,
     "allowJs": true,
     "strictNullChecks": true,
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "noEmit": true,
+    "isolatedModules": true
   },
+  "include": [
+    "app",
+    "index.d.ts"
+  ],
   "exclude": [
-    "node_modules",
-    "lib"
+    "node_modules"
   ]
 }

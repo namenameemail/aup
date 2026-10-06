@@ -1,5 +1,5 @@
 import * as React from "react";
-import * as keyboardjs from "keyboardjs";
+import keyboardjs from "keyboardjs";
 
 export interface UserHotkeyTriggerProps {
     keyValue?: string

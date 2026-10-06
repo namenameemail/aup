@@ -1,4 +1,3 @@
-import * as Tone from "tone";
 import {SynthItem, SynthItemState} from "./SynthItem";
 
 export interface SynthState {
@@ -12,10 +11,6 @@ export class SynthBody {
 
     constructor(onStateChange: (state: SynthState) => any) {
         this.onStateChange = onStateChange;
-
-        Tone.start().then(() => {
-            Tone.Transport.start();
-        });
     }
 
     updateIndexes = () => {
